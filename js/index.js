@@ -1,6 +1,7 @@
 const formSelector = document.querySelector('form');
 const inputSelector = formSelector.querySelector('input');
 const popUpSelector = document.querySelector('.pop-up');
+const favoriteListSelector = document.querySelector('.favorite__list');
 
 const _urlRepos = 'https://api.github.com/search/repositories?q=';
 let test = '';
@@ -24,6 +25,28 @@ class Repos {
     getDate() {
         return this.data;
     }
+    setDate(value) {
+        this.data = value;
+    }
+}
+
+class FavoriteRepos {
+    constructor(parentSelector) {
+        this.repos = [];
+        this.parentSelector = parentSelector;
+    }
+
+    addRepo(repo) {
+        this.repos.push(repo);
+    }
+    removeRepo(id) {
+        this.repos = this.repos.filter(repo => repo.id !== id);
+    }
+
+    getRepos() {
+        return this.repos;
+    }
+
 }
 
 function createElemntPopUp(elements, parent) {
@@ -32,16 +55,61 @@ function createElemntPopUp(elements, parent) {
         const elemntLi = document.createElement('li');
         elemntLi.classList.add('pop-up__item');
         elemntLi.textContent = el.name;
-        // elemntLi.addEventListener();
+        elemntLi.addEventListener('click', () => {
+            favorite.addRepo(el);
+            inputSelector.value = '';
+            createElementFavorite(favorite.getRepos(), favoriteListSelector);
+            repo.setDate([]);
+            parent.innerHTML = '';
+        });
         parent.appendChild(elemntLi)
     });
 }
 
-// const a = new CreateElements();
+function createElementFavorite(elements, parent) {
+    parent.innerHTML = '';
+    if (elements.length) {
+        elements.map(el => {
+            const {name, id} = el;
+            const elementLi = document.createElement('li');
+            elementLi.classList.add('favorite__item', 'item');
 
-const repo = new Repos(_urlRepos);
+            const elementDivLeft = document.createElement('div');
+            const elementDivRight = document.createElement('div');
+            elementDivLeft.classList.add('item__info', 'info-item');
+            elementDivRight.classList.add('item__btn', 'btn-icon');
 
+            const elementPName = document.createElement('p');
+            const elementPOwner = document.createElement('p');
+            const elementPStars = document.createElement('p');
 
+            const elementBtnClose = document.createElement('button');
+
+            elementPName.textContent = `Name: ${name}`;
+            elementPOwner.textContent = `Owner: ${id}`;
+            elementPStars.textContent = 'Stars: 1300';
+
+            elementBtnClose.classList.add('btn-icon__close');
+            elementBtnClose.ariaLabel = 'Удалить из важных';
+            elementBtnClose.addEventListener('click', async (e) => {
+                favorite.removeRepo(id);
+                createElementFavorite(favorite.getRepos(), favoriteListSelector);
+            });
+
+            elementDivLeft.appendChild(elementPName);
+            elementDivLeft.appendChild(elementPOwner);
+            elementDivLeft.appendChild(elementPStars);
+            elementDivRight.appendChild(elementBtnClose);
+
+            elementDivLeft.appendChild(elementPStars);
+
+            elementLi.appendChild(elementDivLeft);
+            elementLi.appendChild(elementDivRight);
+
+            parent.appendChild(elementLi);
+        })
+    }
+}
 
 function debounce(callback, delay) {
     let time = false;
@@ -55,6 +123,9 @@ function debounce(callback, delay) {
     };
 }
 
+
+const repo = new Repos(_urlRepos);
+const favorite = new FavoriteRepos('asd');
 
 inputSelector.addEventListener('keyup', debounce(async (e) => {
     if (e.target.value === '') {
