@@ -123,8 +123,6 @@ body {
     min-height: 45px;
     padding-left: 13px;
     transition: background 0.3s ease-in-out;
-}
-.pop-up__item > span {
     cursor: pointer;
 }
 .pop-up__item:hover {
