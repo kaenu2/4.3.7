@@ -112,14 +112,11 @@ function createElementFavorite(elements, parent) {
 }
 
 function debounce(callback, delay) {
-    let time = false;
+    let time;
 
     return function() {
-        if (time) return;
-
-        callback.apply(this, arguments);
-        time = true;
-        setTimeout(() => time = false, delay);
+        clearTimeout(time);
+        time = setTimeout(() => callback.apply(this, arguments), delay)
     };
 }
 
@@ -139,7 +136,7 @@ inputSelector.addEventListener('keyup', debounce(async (e) => {
         createElemntPopUp(data, popUpSelector);
         return;
     }
-}));
+}, 400));
 
 
 
