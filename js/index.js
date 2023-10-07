@@ -70,45 +70,27 @@ function createElementFavorite(elements, parent) {
     parent.innerHTML = '';
     if (elements.length) {
         elements.map(el => {
-            const {name, id} = el;
-            const elementLi = document.createElement('li');
-            elementLi.classList.add('favorite__item', 'item');
-
-            const elementDivLeft = document.createElement('div');
-            const elementDivRight = document.createElement('div');
-            elementDivLeft.classList.add('item__info', 'info-item');
-            elementDivRight.classList.add('item__btn', 'btn-icon');
-
-            const elementPName = document.createElement('p');
-            const elementPOwner = document.createElement('p');
-            const elementPStars = document.createElement('p');
-
-            const elementBtnClose = document.createElement('button');
-
-            elementPName.textContent = `Name: ${name}`;
-            elementPOwner.textContent = `Owner: ${id}`;
-            elementPStars.textContent = 'Stars: 1300';
-
-            elementBtnClose.classList.add('btn-icon__close');
-            elementBtnClose.ariaLabel = 'Удалить из важных';
-            elementBtnClose.addEventListener('click', async (e) => {
-                favorite.removeRepo(id);
-                createElementFavorite(favorite.getRepos(), favoriteListSelector);
-            });
-
-            elementDivLeft.appendChild(elementPName);
-            elementDivLeft.appendChild(elementPOwner);
-            elementDivLeft.appendChild(elementPStars);
-            elementDivRight.appendChild(elementBtnClose);
-
-            elementDivLeft.appendChild(elementPStars);
-
-            elementLi.appendChild(elementDivLeft);
-            elementLi.appendChild(elementDivRight);
-
-            parent.appendChild(elementLi);
+            const {name, id, owner, stargazers_count: stargazersCount} = el;
+            const content = `
+                <li class="favorite__item item">
+                    <div class="item__info info-item">
+                        <p>Name: ${name}</p>
+                        <p>Owner: ${owner.login}</p>
+                        <p>Stars: ${stargazersCount}</p>
+                    </div>
+                    <div class="item__btn btn-icon">
+                        <button class="btn-icon__close" aria-label="Удалить из важных" onclick="removeFavorite(${id})"></button>
+                    </div>
+                </li>
+            `;
+            parent.insertAdjacentHTML('beforeend', content);
         })
     }
+}
+
+function removeFavorite(id) {
+    favorite.removeRepo(id);
+    createElementFavorite(favorite.getRepos(), favoriteListSelector);
 }
 
 function debounce(callback, delay) {
@@ -129,7 +111,7 @@ inputSelector.addEventListener('keyup', debounce(async (e) => {
         popUpSelector.innerHTML = '';
         return;
     }
-    if (test !== e.target.value && e.code !== 'Space') {
+    if (test.trim() !== e.target.value.trim() && e.code !== 'Space') {
         test = e.target.value;
         await repo.getRepos(e.target.value);
         const data = await repo.getDate();
@@ -138,5 +120,6 @@ inputSelector.addEventListener('keyup', debounce(async (e) => {
     }
 }, 400));
 
-
-
+formSelector.addEventListener('submit', (e) => {
+    e.preventDefault();
+})
