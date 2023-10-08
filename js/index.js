@@ -3,37 +3,31 @@ const inputSelector = formSelector.querySelector('input');
 const popUpSelector = document.querySelector('.pop-up');
 const favoriteListSelector = document.querySelector('.favorite__list');
 
-const _urlRepos = 'https://api.github.com/search/repositories?q=';
-let test = '';
-class Repos {
-    constructor(_url) {
-        this._url = _url;
+const state = {
+    _urlRepositories: 'https://api.github.com/search/repositories?q=',
+    termRepositories: ''
+}
+class FetchData {
+    constructor(url) {
+        this._url = url;
         this.data = [];
     }
-
-    async getRepos(value) {
-        try {
-            const response = await fetch(`${this._url}${value}`);
-            const body = await response.json();
-            if (body.items) {
-                this.data = body.items.slice(0, 5);
-            }
-        } catch (e) {
-            console.error(e.stack);
-        }
+    async fetchGetData(value) {
+        const response = await fetch(this._url + value);
+        const body = await response.json();
+        this.data = body.items.slice(0, 5);
     }
-    getDate() {
+    getData() {
         return this.data;
     }
-    setDate(value) {
+    setData(value) {
         this.data = value;
     }
 }
 
 class FavoriteRepos {
-    constructor(parentSelector) {
+    constructor() {
         this.repos = [];
-        this.parentSelector = parentSelector;
     }
 
     addRepo(repo) {
@@ -49,8 +43,10 @@ class FavoriteRepos {
 
 }
 
+
 function createElemntPopUp(elements, parent) {
     parent.innerHTML = '';
+    const fragment = document.createDocumentFragment();
     elements.map(el => {
         const elemntLi = document.createElement('li');
         elemntLi.classList.add('pop-up__item');
@@ -59,11 +55,12 @@ function createElemntPopUp(elements, parent) {
             favorite.addRepo(el);
             inputSelector.value = '';
             createElementFavorite(favorite.getRepos(), favoriteListSelector);
-            repo.setDate([]);
+            repositories.setData([]);
             parent.innerHTML = '';
         });
-        parent.appendChild(elemntLi)
+        fragment.appendChild(elemntLi)
     });
+    parent.appendChild(fragment);
 }
 
 function createElementFavorite(elements, parent) {
@@ -102,24 +99,23 @@ function debounce(callback, delay) {
     };
 }
 
+const repositories = new FetchData(state._urlRepositories);
+const favorite = new FavoriteRepos();
 
-const repo = new Repos(_urlRepos);
-const favorite = new FavoriteRepos('asd');
+inputSelector.addEventListener('input', debounce(async (e) => {
+    const value = e.target.value;
+    state.termRepositories = value.trim();
 
-inputSelector.addEventListener('keyup', debounce(async (e) => {
-    if (e.target.value === '') {
+    if (!value.length || value === '') {
+        repositories.setData([]);
         popUpSelector.innerHTML = '';
         return;
     }
-    if (test.trim() !== e.target.value.trim() && e.code !== 'Space') {
-        test = e.target.value;
-        await repo.getRepos(e.target.value);
-        const data = await repo.getDate();
-        createElemntPopUp(data, popUpSelector);
+    if (state.termRepositories !== value) {
         return;
     }
-}, 400));
+    await repositories.fetchGetData(value);
+    const data = await repositories.getData();
+    createElemntPopUp(data, popUpSelector);
 
-formSelector.addEventListener('submit', (e) => {
-    e.preventDefault();
-})
+}, 300));
