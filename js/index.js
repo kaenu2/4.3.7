@@ -2,26 +2,41 @@ const formSelector = document.querySelector('form');
 const inputSelector = formSelector.querySelector('input');
 const popUpSelector = document.querySelector('.pop-up');
 const favoriteListSelector = document.querySelector('.favorite__list');
+const errorSelector = document.querySelector('.error-message');
+const noResultMsSelector = document.querySelector('.no-result');
 
-const state = {
+const store = {
     _urlRepositories: 'https://api.github.com/search/repositories?q=',
-    termRepositories: ''
+    termRepositories: '',
 }
 class FetchData {
     constructor(url) {
         this._url = url;
         this.data = [];
+        this.itemsCount = 0;
     }
     async fetchGetData(value) {
-        const response = await fetch(this._url + value);
-        const body = await response.json();
-        this.data = body.items.slice(0, 5);
+        try {
+            const response = await fetch(this._url + value);
+            if (response.ok) {
+                const body = await response.json();
+                this.itemsCount = await body.total_count;
+                this.data = body.items.slice(0, 20);
+            } else {
+                throw new Error();
+            }
+        } catch (e) {
+            throw new Error(e);
+        }
     }
     getData() {
         return this.data;
     }
-    setData(value) {
-        this.data = value;
+    clearDate() {
+        this.data = [];
+    }
+    getItemsCount() {
+        return this.itemsCount;
     }
 }
 
@@ -36,7 +51,6 @@ class FavoriteRepos {
     removeRepo(id) {
         this.repos = this.repos.filter(repo => repo.id !== id);
     }
-
     getRepos() {
         return this.repos;
     }
@@ -44,7 +58,7 @@ class FavoriteRepos {
 }
 
 
-function createElemntPopUp(elements, parent) {
+function createElemntPopUp(elements, parent, listSelector) {
     parent.innerHTML = '';
     const fragment = document.createDocumentFragment();
     elements.map(el => {
@@ -53,14 +67,18 @@ function createElemntPopUp(elements, parent) {
         elemntLi.textContent = el.name;
         elemntLi.addEventListener('click', () => {
             favorite.addRepo(el);
-            inputSelector.value = '';
-            createElementFavorite(favorite.getRepos(), favoriteListSelector);
-            repositories.setData([]);
-            parent.innerHTML = '';
+            createElementFavorite(favorite.getRepos(), listSelector);
+            repositories.clearDate();
+            clearPopUp(inputSelector, parent, store.termRepositories);
         });
-        fragment.appendChild(elemntLi)
+        fragment.appendChild(elemntLi);
     });
     parent.appendChild(fragment);
+}
+function clearPopUp(inputSelector, parentSelector, term) {
+    inputSelector.value = '';
+    term = '';
+    parentSelector.innerHTML = '';
 }
 
 function createElementFavorite(elements, parent) {
@@ -91,31 +109,74 @@ function removeFavorite(id) {
 }
 
 function debounce(callback, delay) {
-    let time;
+    let timeoutID;
 
     return function() {
-        clearTimeout(time);
-        time = setTimeout(() => callback.apply(this, arguments), delay)
+        clearTimeout(timeoutID);
+        timeoutID = setTimeout(() => callback.apply(this, arguments), delay)
     };
 }
+async function onChengeInputSearch(event, term, nodeElement, nodeElementList) {
+    const target = event.target;
+    const value = target.value;
+    term = value.trim();
 
-const repositories = new FetchData(state._urlRepositories);
+    if (!value) {
+        repositories.clearDate();
+        nodeElement.innerHTML = '';
+        return;
+    }
+    if (term !== value) return;
+
+    try {
+        await repositories.fetchGetData(value);
+        const favoriteRepositories = favorite.getRepos();
+        const data = await repositories.getData();
+        const getItemsCount = await repositories.getItemsCount();
+        const newDate = filterArray(data, favoriteRepositories);
+        if (!getItemsCount) {
+            addMessage(noResultMsSelector, 'no-result--visable');
+        }
+        createElemntPopUp(newDate, nodeElement, nodeElementList);
+    } catch (e) {
+        addMessage(errorSelector, 'error-message--visable');
+        addMessage(target, 'search__input--border-red');
+    }
+}
+function filterArray(date, sortArr) {
+    let res = JSON.parse(JSON.stringify(date));
+    for (let i = 0; i < sortArr.length; i++) {
+        const el = sortArr[i];
+        for (let j = 0; j < res.length; j++) {
+            const el2 = res[j];
+            if (el.id === el2.id) {
+                res.splice(j, 1);
+            }
+        }
+    }
+    return res.slice(0,5);
+}
+
+function removeMessage(nodeElement, className) {
+    nodeElement.classList.remove(className);
+}
+function addMessage(nodeElement, className) {
+    nodeElement.classList.add(className);
+}
+
+const repositories = new FetchData(store._urlRepositories);
 const favorite = new FavoriteRepos();
 
-inputSelector.addEventListener('input', debounce(async (e) => {
-    const value = e.target.value;
-    state.termRepositories = value.trim();
+onChengeInputSearch = debounce(onChengeInputSearch, 400);
 
-    if (!value.length || value === '') {
-        repositories.setData([]);
-        popUpSelector.innerHTML = '';
-        return;
-    }
-    if (state.termRepositories !== value) {
-        return;
-    }
-    await repositories.fetchGetData(value);
-    const data = await repositories.getData();
-    createElemntPopUp(data, popUpSelector);
+inputSelector.addEventListener('input',  (e) => {
+    removeMessage(e.target,'search__input--border-red');
+    removeMessage(errorSelector,'error-message--visable');
+    removeMessage(noResultMsSelector, 'no-result--visable');
+    onChengeInputSearch(e, store.termRepositories, popUpSelector, favoriteListSelector);
+});
 
-}, 300));
+
+
+
+
